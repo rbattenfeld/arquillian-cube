@@ -26,12 +26,14 @@ public final class BindingUtil {
         String gatewayIp = inspectResponse.getNetworkSettings().getGateway();
 
         Binding binding = new Binding(gatewayIp);
-        for (Entry<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> bind : hostConfig.getPortBindings()
-                .getBindings().entrySet()) {
-            com.github.dockerjava.api.model.Ports.Binding[] allBindings = bind.getValue();
-            for (com.github.dockerjava.api.model.Ports.Binding bindings : allBindings) {
-                binding.addPortBinding(bind.getKey().getPort(), bindings.getHostPort());
-            }
+        if (hostConfig.getPortBindings() != null) {
+	        for (Entry<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> bind : hostConfig.getPortBindings()
+	                .getBindings().entrySet()) {
+	            com.github.dockerjava.api.model.Ports.Binding[] allBindings = bind.getValue();
+	            for (com.github.dockerjava.api.model.Ports.Binding bindings : allBindings) {
+	                binding.addPortBinding(bind.getKey().getPort(), bindings.getHostPort());
+	            }
+	        }
         }
         return binding;
     }

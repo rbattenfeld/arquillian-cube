@@ -7,9 +7,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import org.arquillian.cube.impl.docker.DockerClientExecutor;
 import org.arquillian.cube.impl.util.BindingUtil;
 import org.arquillian.cube.impl.util.ContainerUtil;
 import org.arquillian.cube.spi.Binding;
@@ -20,13 +22,83 @@ import org.jboss.arquillian.config.descriptor.api.ContainerDef;
 import org.jboss.arquillian.container.spi.Container;
 import org.jboss.arquillian.container.spi.ContainerRegistry;
 import org.jboss.arquillian.container.spi.event.container.BeforeSetup;
+import org.jboss.arquillian.core.api.Instance;
+import org.jboss.arquillian.core.api.annotation.Inject;
 import org.jboss.arquillian.core.api.annotation.Observes;
+
+import com.github.dockerjava.api.model.ExposedPort;
 
 public class RemapContainerController {
 
     private static final Pattern portPattern = Pattern.compile("(?i:.*port.*)");
 
-    public void remapContainer(@Observes BeforeSetup event, CubeRegistry cubeRegistry,
+    @Inject
+    private Instance<DockerClientExecutor> dockerClientExecutor;
+    
+    public void remapContainer2(@Observes(precedence = 50) BeforeSetup event, CubeRegistry cubeRegistry, ContainerRegistry containerRegistry) throws InstantiationException, IllegalAccessException {
+        
+    	Container container = ContainerUtil.getContainerByDeployableContainer(containerRegistry, event.getDeployableContainer());
+        if (container == null) {
+            return;
+        }
+
+        Cube cube = cubeRegistry.getCube(container.getName());
+        if (cube == null) {
+            return; // No Cube found matching Container name, not managed by Cube
+        }
+        
+        if (dockerClientExecutor.get() != null) {
+	    	final Map<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> publishedPorts = dockerClientExecutor.get().getpublishedPortBindings();
+	        if (publishedPorts != null) {
+		        for (Entry<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> bindingEntry : publishedPorts.entrySet()) {
+					final int exposedPort = bindingEntry.getKey().getPort();
+					for (com.github.dockerjava.api.model.Ports.Binding b : bindingEntry.getValue()) {
+						
+						for (Entry<String, Object> e : cube.configuration().entrySet()) {
+							final String key = e.getKey();
+							final Object value = e.getValue();
+							if (value instanceof ArrayList) {
+								final ArrayList remapedList = new ArrayList<>();
+								for (Object objItem : (ArrayList)value) {
+									String remapedStr = null;
+									if (objItem instanceof String) {
+										final String itemstr = (String)objItem;
+										final String searchPattern = "remap" + String.valueOf(exposedPort);
+										if (itemstr.indexOf(searchPattern) >= 0) {
+											remapedStr = itemstr.replaceAll(searchPattern, Integer.toString(b.getHostPort()));
+										}
+									}
+									if (remapedStr != null) {
+										remapedList.add(remapedStr);
+									} else {
+										remapedList.add(objItem);
+									}
+								}
+								e.setValue(remapedList);
+							}
+						}
+						
+						final ContainerDef containerConfiguration = container.getContainerConfiguration();
+						final List<String> portPropertiesFromArquillianConfigurationFile = filterArquillianConfigurationPropertiesByPortAttribute(containerConfiguration);
+						final Class<?> configurationClass = container.getDeployableContainer().getConfigurationClass();
+						final List<PropertyDescriptor> configurationClassPortFields = filterConfigurationClassPropertiesByPortAttribute(configurationClass);
+						final Object newConfigurationInstance = configurationClass.newInstance();
+			            for (PropertyDescriptor configurationClassPortField : configurationClassPortFields) {
+			                if (portPropertiesFromArquillianConfigurationFile.contains(configurationClassPortField.getName())) {
+			                	final int containerPort = getDefaultPortFromConfigurationInstance(newConfigurationInstance, configurationClass, configurationClassPortField);
+			                    if (exposedPort == containerPort) {
+			                        containerConfiguration.overrideProperty(configurationClassPortField.getName(), Integer.toString(b.getHostPort()));
+			                    }
+	
+			                }
+			            }
+					}
+		        }
+	        }
+        }
+    }
+
+    public void remapContainer(@Observes(precedence = 20000) BeforeSetup event, CubeRegistry cubeRegistry,
             ContainerRegistry containerRegistry) throws InstantiationException, IllegalAccessException {
 
         Container container = ContainerUtil.getContainerByDeployableContainer(containerRegistry,

@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,11 +23,14 @@ import javax.ws.rs.ProcessingException;
 import org.arquillian.cube.impl.client.CubeConfiguration;
 import org.arquillian.cube.impl.util.BindingUtil;
 import org.arquillian.cube.impl.util.IOUtil;
+import org.jboss.arquillian.config.descriptor.api.ExtensionDef;
+import org.jboss.arquillian.container.spi.client.container.DeployableContainer;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.NotFoundException;
 import com.github.dockerjava.api.command.BuildImageCmd;
 import com.github.dockerjava.api.command.CreateContainerCmd;
+import com.github.dockerjava.api.command.InspectContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.PingCmd;
 import com.github.dockerjava.api.command.PullImageCmd;
@@ -91,7 +95,8 @@ public class DockerClientExecutor {
 
     private DockerClient dockerClient;
     private CubeConfiguration cubeConfiguration;
-
+    private Map<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> publishedPortBindings;
+    
     public DockerClientExecutor(CubeConfiguration cubeConfiguration) {
         DockerClientConfigBuilder configBuilder = DockerClientConfig.createDefaultConfigBuilder();
         configBuilder.withVersion(cubeConfiguration.getDockerServerVersion()).withUri(
@@ -103,6 +108,10 @@ public class DockerClientExecutor {
 
     public List<Container> listRunningContainers() {
         return this.dockerClient.listContainersCmd().exec();
+    }
+
+    public Map<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> getpublishedPortBindings() {
+        return publishedPortBindings;
     }
 
     public String createContainer(String name, Map<String, Object> containerConfiguration) {
@@ -313,6 +322,10 @@ public class DockerClientExecutor {
         }
 
         startContainerCmd.exec();
+        
+        if (containerConfiguration.containsKey(PUBLISH_ALL_PORTS)) {
+        	publishedPortBindings = getPublishedPorts(id);
+        }
     }
 
     private Ports assignPorts(List<String> portBindings) {
@@ -353,7 +366,7 @@ public class DockerClientExecutor {
     public int waitContainer(String containerId) {
         return this.dockerClient.waitContainerCmd(containerId).exec();
     }
-
+    
     public void pingDockerServer() {
         try {
             PingCmd pingCmd = this.dockerClient.pingCmd();
@@ -368,6 +381,13 @@ public class DockerClientExecutor {
         }
     }
 
+    public Map<ExposedPort, Binding[]> getPublishedPorts(final String id) {
+    	final InspectContainerCmd cmd = dockerClient.inspectContainerCmd(id);
+        final InspectContainerResponse response = cmd.exec();
+        final Ports ports = response.getNetworkSettings().getPorts();
+        return  ports.getBindings();
+    }
+    
     public String buildImage(String location, Map<String, Object> params) {
 
         BuildImageCmd buildImageCmd = createBuildCommand(location);

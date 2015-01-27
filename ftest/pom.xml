@@ -105,6 +105,24 @@
         </profile>
 
         <profile>
+            <id>tomcat-7-dynamic-ports</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <arquillian.launch>tomcat_dynamic_ports</arquillian.launch>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.arquillian.container</groupId>
+                    <artifactId>arquillian-tomcat-remote-7</artifactId>
+                    <version>${version.tomcat}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        
+        <profile>
             <id>tomcat-7-default-ports</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -168,6 +186,34 @@
             <id>wildfly-8</id>
             <properties>
                 <arquillian.launch>wildfly</arquillian.launch>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly</groupId>
+                    <artifactId>wildfly-arquillian-container-remote</artifactId>
+                    <version>${version.wildfly}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>wildfly-8-dynamic-ports</id>
+            <properties>
+                <arquillian.launch>wildfly_dynamic_ports</arquillian.launch>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly</groupId>
+                    <artifactId>wildfly-arquillian-container-remote</artifactId>
+                    <version>${version.wildfly}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>wildfly-8-dynamic-ports-2</id>
+            <properties>
+                <arquillian.launch>wildfly_dynamic_ports_2</arquillian.launch>
             </properties>
             <dependencies>
                 <dependency>
