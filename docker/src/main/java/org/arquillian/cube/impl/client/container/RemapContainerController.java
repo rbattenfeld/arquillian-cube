@@ -52,32 +52,7 @@ public class RemapContainerController {
 	        if (publishedPorts != null) {
 		        for (Entry<ExposedPort, com.github.dockerjava.api.model.Ports.Binding[]> bindingEntry : publishedPorts.entrySet()) {
 					final int exposedPort = bindingEntry.getKey().getPort();
-					for (com.github.dockerjava.api.model.Ports.Binding b : bindingEntry.getValue()) {
-						
-						for (Entry<String, Object> e : cube.configuration().entrySet()) {
-							final String key = e.getKey();
-							final Object value = e.getValue();
-							if (value instanceof ArrayList) {
-								final ArrayList remapedList = new ArrayList<>();
-								for (Object objItem : (ArrayList)value) {
-									String remapedStr = null;
-									if (objItem instanceof String) {
-										final String itemstr = (String)objItem;
-										final String searchPattern = "remap" + String.valueOf(exposedPort);
-										if (itemstr.indexOf(searchPattern) >= 0) {
-											remapedStr = itemstr.replaceAll(searchPattern, Integer.toString(b.getHostPort()));
-										}
-									}
-									if (remapedStr != null) {
-										remapedList.add(remapedStr);
-									} else {
-										remapedList.add(objItem);
-									}
-								}
-								e.setValue(remapedList);
-							}
-						}
-						
+					for (com.github.dockerjava.api.model.Ports.Binding b : bindingEntry.getValue()) {						
 						final ContainerDef containerConfiguration = container.getContainerConfiguration();
 						final List<String> portPropertiesFromArquillianConfigurationFile = filterArquillianConfigurationPropertiesByPortAttribute(containerConfiguration);
 						final Class<?> configurationClass = container.getDeployableContainer().getConfigurationClass();
@@ -88,8 +63,7 @@ public class RemapContainerController {
 			                	final int containerPort = getDefaultPortFromConfigurationInstance(newConfigurationInstance, configurationClass, configurationClassPortField);
 			                    if (exposedPort == containerPort) {
 			                        containerConfiguration.overrideProperty(configurationClassPortField.getName(), Integer.toString(b.getHostPort()));
-			                    }
-	
+			                    }	
 			                }
 			            }
 					}

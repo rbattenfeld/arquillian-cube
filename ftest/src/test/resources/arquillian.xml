@@ -80,9 +80,10 @@
               image: tutum/tomcat:7.0
               exposedPorts: [8080/tcp, 8089/tcp]
               await:
-                strategy: polling
+                strategy: sleeping
+                sleepTime: 5s
               containerVisible: false
-              env: [TOMCAT_PASS=mypass, JAVA_OPTS=-Dcom.sun.management.jmxremote.port=remap8089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false]
+              env: [TOMCAT_PASS=mypass, JAVA_OPTS=-Dcom.sun.management.jmxremote.port=8089 -Dcom.sun.management.jmxremote.rmi.port=8087 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false]
               publishAllPorts: true
         </property>
     </extension>
@@ -114,6 +115,7 @@
         <configuration>
             <property name="host">localhost</property>
             <property name="httpPort">8080</property>
+            <property name="jmxPort">8089</property>
             <property name="user">admin</property>
             <property name="pass">mypass</property>
         </configuration>
