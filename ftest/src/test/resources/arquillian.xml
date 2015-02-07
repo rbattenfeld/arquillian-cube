@@ -23,6 +23,13 @@
                 strategy: polling
               env: [TOMCAT_PASS=mypass, JAVA_OPTS=-Dcom.sun.management.jmxremote.port=8089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false]
               portBindings: [8089/tcp, 8081->8080/tcp]
+            tomcat-${arquillian.cube.UUID}:
+              image: tutum/tomcat:7.0
+              exposedPorts: [8089/tcp]
+              await:
+                strategy: polling
+              env: [TOMCAT_PASS=mypass, JAVA_OPTS=-Dcom.sun.management.jmxremote.port=8089 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false]
+              portBindings: [8089/tcp, 8081->8080/tcp]
             tomcat_dockerfile:
               buildImage:
                 dockerfileLocation: src/test/resources/tomcat
@@ -37,6 +44,12 @@
                 dockerfileLocation: src/test/resources/wildfly
                 noCache: true
                 remove: true
+              exposedPorts: [8080/tcp, 9990/tcp]
+              await:
+                strategy: polling
+              portBindings: [8081->8080/tcp, 9991->9990/tcp]
+            wildfly${arquillian.cube.UUID}:
+              image: jboss/wildfly-admin
               exposedPorts: [8080/tcp, 9990/tcp]
               await:
                 strategy: polling
@@ -83,7 +96,23 @@
             <property name="pass">mypass</property>
         </configuration>
     </container>
+    <container qualifier="tomcat-${arquillian.cube.UUID}">
+        <configuration>
+            <property name="host">localhost</property>
+            <property name="httpPort">8081</property>
+            <property name="user">admin</property>
+            <property name="pass">mypass</property>
+        </configuration>
+    </container>
     <container qualifier="wildfly">
+        <configuration>
+            <property name="target">wildfly:8.1.0.Final:remote</property>
+            <property name="managementPort">9991</property>
+            <property name="username">admin</property>
+            <property name="password">Admin#70365</property>
+        </configuration>
+    </container>
+    <container qualifier="wildfly${arquillian.cube.UUID}">
         <configuration>
             <property name="target">wildfly:8.1.0.Final:remote</property>
             <property name="managementPort">9991</property>
